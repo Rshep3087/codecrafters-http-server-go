@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var StatusOK = "HTTP/1.1 200 OK\r\n\r\nContent-Type: text/plain\r\n\r\nContent-Length: %s\r\n\r\n%s"
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -39,6 +41,11 @@ func main() {
 	path := requestParts[1]
 
 	if path == "/" {
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		if err != nil {
+			fmt.Println("Error writing response: ", err.Error())
+		}
+	} else if path == "/echo" {
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 		if err != nil {
 			fmt.Println("Error writing response: ", err.Error())
