@@ -31,21 +31,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// parse the path from the request
-	// example: GET / HTTP/1.1
-	// path is "/"
-	// or GET /index.html HTTP/1.1
-	// path is "/index.html"
-
-	// parse the path from the request
-	// example: GET / HTTP/1.1
-	// path is "/"
-	// or GET /index.html HTTP/1.1
-	// path is "/index.html"
-
 	// split the request by spaces
 	requestParts := strings.Split(string(req), " ")
 
+	fmt.Println(requestParts)
 	// the second part of the request is the path
 	path := requestParts[1]
 
