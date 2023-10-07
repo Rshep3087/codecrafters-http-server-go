@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -30,5 +31,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println(string(req))
+	// parse the path from the request
+	// example: GET / HTTP/1.1
+	// path is "/"
+	// or GET /index.html HTTP/1.1
+	// path is "/index.html"
+
+	// parse the path from the request
+	// example: GET / HTTP/1.1
+	// path is "/"
+	// or GET /index.html HTTP/1.1
+	// path is "/index.html"
+
+	// split the request by spaces
+	requestParts := strings.Split(string(req), " ")
+
+	// the second part of the request is the path
+	path := requestParts[1]
+
+	if path == "/" {
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	} else {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	}
 }
