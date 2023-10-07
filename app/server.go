@@ -22,15 +22,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = conn.Read(make([]byte, 1024))
+	req := make([]byte, 1024)
+
+	_, err = conn.Read(req)
 	if err != nil {
 		fmt.Println("Error reading: ", err.Error())
 		os.Exit(1)
 	}
 
-	_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	if err != nil {
-		fmt.Println("Error writing to connection: ", err.Error())
-		os.Exit(1)
-	}
+	fmt.Println(string(req))
 }
