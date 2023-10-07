@@ -39,8 +39,14 @@ func main() {
 	path := requestParts[1]
 
 	if path == "/" {
-		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		if err != nil {
+			fmt.Println("Error writing response: ", err.Error())
+		}
 	} else {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		if err != nil {
+			fmt.Println("Error writing response: ", err.Error())
+		}
 	}
 }
