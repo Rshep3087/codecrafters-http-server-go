@@ -40,6 +40,8 @@ func main() {
 	// the second part of the request is the path
 	path := requestParts[1]
 
+	fmt.Println(path)
+
 	if path == "/" {
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 		if err != nil {
