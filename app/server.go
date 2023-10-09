@@ -47,8 +47,9 @@ func main() {
 		if err != nil {
 			fmt.Println("Error writing response: ", err.Error())
 		}
-	} else if firstPart == "hello" {
-		_, err = conn.Write([]byte(fmt.Sprintf(StatusOK, "5", "hello")))
+	} else if firstPart == "echo" {
+		secondPart := splitPath[2]
+		_, err = conn.Write([]byte(fmt.Sprintf(StatusOK, len(secondPart), secondPart)))
 		if err != nil {
 			fmt.Println("Error writing response: ", err.Error())
 		}
