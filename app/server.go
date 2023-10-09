@@ -47,6 +47,11 @@ func main() {
 		if err != nil {
 			fmt.Println("Error writing response: ", err.Error())
 		}
+	} else if firstPart == "hello" {
+		_, err = conn.Write([]byte(fmt.Sprintf(StatusOK, "5", "hello")))
+		if err != nil {
+			fmt.Println("Error writing response: ", err.Error())
+		}
 	} else {
 		_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		if err != nil {
