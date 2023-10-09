@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var StatusOK = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %s\r\n\r\n%s"
+var StatusOK = "HTTP/1.1 200 OK\r\n\r\nContent-Type: text/plain\r\n\r\nContent-Length: %s\r\n\r\n%s"
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -40,6 +40,7 @@ func main() {
 
 	splitPath := strings.Split(path, "/")
 	firstPart := splitPath[1]
+	fmt.Println("firstPart: ", firstPart)
 
 	if path == "/" {
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
@@ -49,7 +50,7 @@ func main() {
 	} else if firstPart == "echo" {
 		secondPart := splitPath[2]
 		resp := fmt.Sprintf(StatusOK, len(secondPart), secondPart)
-		fmt.Println(resp)
+		fmt.Println("resp: ", resp)
 		_, err = conn.Write([]byte(resp))
 		if err != nil {
 			fmt.Println("Error writing response: ", err.Error())
