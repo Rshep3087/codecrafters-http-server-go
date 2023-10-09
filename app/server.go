@@ -35,12 +35,14 @@ func main() {
 
 	// split the request by spaces
 	requestParts := strings.Split(string(req), " ")
-
-	fmt.Println(requestParts)
 	// the second part of the request is the path
 	path := requestParts[1]
 
-	fmt.Println(path)
+	splitPath := strings.Split(path, "/")
+	firstPart := splitPath[0]
+	secondPart := splitPath[1]
+	fmt.Println("firstPart: ", firstPart)
+	fmt.Println("secondPart: ", secondPart)
 
 	if path == "/" {
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
