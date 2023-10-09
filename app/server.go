@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var StatusOK = "HTTP/1.1 200 OK\r\n\r\nContent-Type: text/plain\r\n\r\nContent-Length: %s\r\n\r\n%s"
+var StatusOK = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %s\r\n\r\n%s"
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
