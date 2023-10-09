@@ -40,9 +40,7 @@ func main() {
 
 	splitPath := strings.Split(path, "/")
 	firstPart := splitPath[1]
-	secondPart := splitPath[2]
 	fmt.Println("firstPart: ", firstPart)
-	fmt.Println("secondPart: ", secondPart)
 
 	if path == "/" {
 		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
