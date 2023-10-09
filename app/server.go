@@ -39,8 +39,8 @@ func main() {
 	path := requestParts[1]
 
 	splitPath := strings.Split(path, "/")
-	firstPart := splitPath[0]
-	secondPart := splitPath[1]
+	firstPart := splitPath[1]
+	secondPart := splitPath[2]
 	fmt.Println("firstPart: ", firstPart)
 	fmt.Println("secondPart: ", secondPart)
 
