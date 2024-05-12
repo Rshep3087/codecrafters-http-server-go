@@ -9,3 +9,13 @@ submit:
 
 test:
     codecrafters test
+
+
+index:
+    http :4221
+
+echo:
+    http :4221/echo/grape
+
+notfound:
+    http :4221/notfound

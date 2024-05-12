@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strings"
 )
 
@@ -120,50 +119,82 @@ func (r *HTTPResponse) Bytes() []byte {
 var StatusOK = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s"
 
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:4221")
+	srv := NewServer()
+
+	err := srv.Serve()
 	if err != nil {
-		fmt.Println("Failed to bind to port 4221")
-		os.Exit(1)
+		fmt.Println(err)
 	}
+}
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
-	}
+type Server struct {
+	// routes is a map of paths to handler functions
+}
 
-	req := make([]byte, 1024)
+func NewServer() *Server {
+	return &Server{}
+}
 
-	_, err = conn.Read(req)
-	if err != nil {
-		fmt.Println("Error reading: ", err.Error())
-		os.Exit(1)
-	}
-
-	httpReq, err := ParseHTTPRequest(bufio.NewReader(bytes.NewReader(req)))
-	if err != nil {
-		fmt.Println("Error parsing request: ", err.Error())
-		os.Exit(1)
-	}
-
-	log.Printf("Request: %+v", httpReq)
-
-	if httpReq.StartLine.Path == "/" {
-		response := HTTPResponse{
+func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
+	// handle "/" route
+	if req.StartLine.Path == "/" {
+		return &HTTPResponse{
 			StatusLine: "HTTP/1.1 200 OK",
 		}
-		_, err = conn.Write(response.Bytes())
-		if err != nil {
-			fmt.Println("Error writing response: ", err.Error())
+	}
+
+	// handle "/echo" route
+	if strings.HasPrefix(req.StartLine.Path, "/echo/") {
+		msg := strings.TrimPrefix(req.StartLine.Path, "/echo/")
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 200 OK",
+			Headers: map[string]string{
+				"Content-Type":   "text/plain",
+				"Content-Length": fmt.Sprintf("%d", len(msg)),
+			},
+			Body: msg,
 		}
+	}
+
+	// handle 404
+	return &HTTPResponse{
+		StatusLine: "HTTP/1.1 404 Not Found",
+	}
+}
+
+func (s *Server) handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	req, err := ParseHTTPRequest(bufio.NewReader(conn))
+	if err != nil {
+		fmt.Println("Failed to parse request")
 		return
 	}
 
-	_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	log.Printf("received request: %s %s %s", req.StartLine.Method, req.StartLine.Path, req.StartLine.Version)
+
+	resp := s.routeRequest(req)
+	_, err = conn.Write(resp.Bytes())
 	if err != nil {
-		fmt.Println("Error writing response: ", err.Error())
+		fmt.Println("Failed to write response")
 	}
+}
 
-	conn.Close()
+func (s *Server) Serve() error {
+	l, err := net.Listen("tcp", "0.0.0.0:4221")
+	if err != nil {
+		fmt.Println("Failed to bind to port 4221")
+		return fmt.Errorf("failed to bind to port 4221: %w", err)
+	}
+	defer l.Close()
 
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Failed to accept connection")
+			return fmt.Errorf("failed to accept connection: %w", err)
+		}
+
+		go s.handleConnection(conn)
+	}
 }
