@@ -156,6 +156,19 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 		}
 	}
 
+	// handle "/user-agent
+	if req.StartLine.Path == "/user-agent" {
+		ua := req.Headers["User-Agent"]
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 200 OK",
+			Headers: map[string]string{
+				"Content-Type":   "text/plain",
+				"Content-Length": fmt.Sprintf("%d", len(ua)),
+			},
+			Body: ua,
+		}
+	}
+
 	// handle 404
 	return &HTTPResponse{
 		StatusLine: "HTTP/1.1 404 Not Found",
