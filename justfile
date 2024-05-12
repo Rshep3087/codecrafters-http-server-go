@@ -19,3 +19,9 @@ echo:
 
 notfound:
     http :4221/notfound
+
+user-agent:
+    # make an http call to the server with a User-Agent header set to Mozilla
+    # check that Mozilla is returned in the response
+    http :4221/user-agent User-Agent:Mozilla | rg Mozilla | wc -l | xargs echo "Mozilla is returned" || echo "Mozilla is not returned"
+
