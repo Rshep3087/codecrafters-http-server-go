@@ -28,3 +28,6 @@ files-exists:
 
 files-not-exists: 
     http :4221/files/does-not-exist
+
+post-file:
+    http -v POST :4221/files/test.json name=John email=john@example.org

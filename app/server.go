@@ -5,16 +5,17 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 type HTTPRequest struct {
 	StartLine StartLine
 	Headers   map[string]string
+	Body      []byte
 }
 
 type StartLine struct {
@@ -25,15 +26,39 @@ type StartLine struct {
 
 func ParseHTTPRequest(r *bufio.Reader) (*HTTPRequest, error) {
 	// read the first line of the request
+	log.Println("Parsing HTTP request")
 	startLine, err := readStartLine(r)
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Start line parsed")
 
 	// read the headers
 	headers, err := readHeaders(r)
 	if err != nil {
 		return nil, err
+	}
+	log.Println("Headers parsed: ", headers)
+
+	// read the rest of the request and log for now
+	cntLen := headers["Content-Length"]
+	if cntLen != "" {
+
+		bodyLen := 0
+		fmt.Sscanf(cntLen, "%d", &bodyLen)
+		log.Println("Body length: ", bodyLen)
+
+		bdy := make([]byte, bodyLen)
+		_, err = r.Read(bdy)
+		if err != nil {
+			return nil, err
+		}
+		log.Println("Body read: ", string(bdy))
+		return &HTTPRequest{
+			StartLine: startLine,
+			Headers:   headers,
+			Body:      bdy,
+		}, nil
 	}
 
 	return &HTTPRequest{
@@ -88,6 +113,7 @@ func readHeaders(r *bufio.Reader) (map[string]string, error) {
 		if err != nil {
 			return headers, err
 		}
+		// end of headers
 		if len(line) == 0 {
 			break
 		}
@@ -135,18 +161,12 @@ func main() {
 
 type Server struct {
 	// fileDirectory is a filesystem directory where the server will look for files
-	fileSys fs.FS
+	dir string
 }
 
 func NewServer(dir string) *Server {
-	var fs fs.FS
-	if dir != "" {
-		log.Print("Serving files from directory: ", dir)
-		fs = os.DirFS(dir)
-	}
-
 	return &Server{
-		fileSys: fs,
+		dir: dir,
 	}
 }
 
@@ -186,7 +206,17 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 
 	// handle serving files
 	if strings.HasPrefix(req.StartLine.Path, "/files/") {
-		return s.handleFiles(req)
+		if req.StartLine.Method == "GET" {
+			return s.serveFile(req)
+		}
+
+		if req.StartLine.Method == "POST" {
+			return s.saveFile(req)
+		}
+
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 405 Method Not Allowed",
+		}
 	}
 
 	// handle 404
@@ -195,16 +225,40 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 	}
 }
 
-func (s *Server) handleFiles(req *HTTPRequest) *HTTPResponse {
-	log.Printf("serving file: %s", req.StartLine.Path)
-	if s.fileSys == nil {
+// saveFile saves the body of the request to a file
+// with the name specified in the path of the request
+func (s *Server) saveFile(req *HTTPRequest) *HTTPResponse {
+	log.Printf("saving file: %s", req.StartLine.Path)
+	name := strings.TrimPrefix(req.StartLine.Path, "/files/")
+
+	fp := filepath.Join(s.dir, name)
+	f, err := os.Create(fp)
+	if err != nil {
+		log.Printf("failed to create file: %s", name)
 		return &HTTPResponse{
-			StatusLine: "HTTP/1.1 404 Not Found",
+			StatusLine: "HTTP/1.1 500 Internal Server Error",
+		}
+	}
+	defer f.Close()
+
+	_, err = f.Write(req.Body)
+	if err != nil {
+		log.Printf("failed to write file: %s", name)
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 500 Internal Server Error",
 		}
 	}
 
+	log.Printf("saved file: %s", name)
+	return &HTTPResponse{
+		StatusLine: "HTTP/1.1 201 Created",
+	}
+}
+
+func (s *Server) serveFile(req *HTTPRequest) *HTTPResponse {
+
 	name := strings.TrimPrefix(req.StartLine.Path, "/files/")
-	f, err := s.fileSys.Open(name)
+	f, err := os.Open(filepath.Join(s.dir, name))
 	if err != nil {
 		log.Printf("failed to open file: %s", name)
 		return &HTTPResponse{
