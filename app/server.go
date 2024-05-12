@@ -180,15 +180,7 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 
 	// handle "/echo" route
 	if strings.HasPrefix(req.StartLine.Path, "/echo/") {
-		msg := strings.TrimPrefix(req.StartLine.Path, "/echo/")
-		return &HTTPResponse{
-			StatusLine: "HTTP/1.1 200 OK",
-			Headers: map[string]string{
-				"Content-Type":   "text/plain",
-				"Content-Length": fmt.Sprintf("%d", len(msg)),
-			},
-			Body: msg,
-		}
+		return s.processEchoRequest(req)
 	}
 
 	// handle "/user-agent
@@ -222,6 +214,27 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 	// handle 404
 	return &HTTPResponse{
 		StatusLine: "HTTP/1.1 404 Not Found",
+	}
+}
+
+func (*Server) processEchoRequest(req *HTTPRequest) *HTTPResponse {
+	log.Println("Processing echo request")
+	defer log.Println("Echo request processed")
+	msg := strings.TrimPrefix(req.StartLine.Path, "/echo/")
+
+	headers := map[string]string{
+		"Content-Type":   "text/plain",
+		"Content-Length": fmt.Sprintf("%d", len(msg)),
+	}
+
+	if req.Headers["Accept-Encoding"] == "gzip" {
+		headers["Content-Encoding"] = "gzip"
+	}
+
+	return &HTTPResponse{
+		StatusLine: "HTTP/1.1 200 OK",
+		Headers:    headers,
+		Body:       msg,
 	}
 }
 
