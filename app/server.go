@@ -3,9 +3,12 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -117,9 +120,12 @@ func (r *HTTPResponse) Bytes() []byte {
 }
 
 var StatusOK = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s"
+var directory = flag.String("directory", "", "the directory to serve files from")
 
 func main() {
-	srv := NewServer()
+	flag.Parse()
+
+	srv := NewServer(*directory)
 
 	err := srv.Serve()
 	if err != nil {
@@ -128,11 +134,20 @@ func main() {
 }
 
 type Server struct {
-	// routes is a map of paths to handler functions
+	// fileDirectory is a filesystem directory where the server will look for files
+	fileSys fs.FS
 }
 
-func NewServer() *Server {
-	return &Server{}
+func NewServer(dir string) *Server {
+	var fs fs.FS
+	if dir != "" {
+		log.Print("Serving files from directory: ", dir)
+		fs = os.DirFS(dir)
+	}
+
+	return &Server{
+		fileSys: fs,
+	}
 }
 
 func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
@@ -169,9 +184,59 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 		}
 	}
 
+	// handle serving files
+	if strings.HasPrefix(req.StartLine.Path, "/files/") {
+		return s.handleFiles(req)
+	}
+
 	// handle 404
 	return &HTTPResponse{
 		StatusLine: "HTTP/1.1 404 Not Found",
+	}
+}
+
+func (s *Server) handleFiles(req *HTTPRequest) *HTTPResponse {
+	log.Printf("serving file: %s", req.StartLine.Path)
+	if s.fileSys == nil {
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 404 Not Found",
+		}
+	}
+
+	name := strings.TrimPrefix(req.StartLine.Path, "/files/")
+	f, err := s.fileSys.Open(name)
+	if err != nil {
+		log.Printf("failed to open file: %s", name)
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 404 Not Found",
+		}
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		log.Printf("failed to stat file: %s", name)
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 404 Not Found",
+		}
+	}
+
+	buf := make([]byte, fi.Size())
+	_, err = f.Read(buf)
+	if err != nil {
+		log.Printf("failed to read file: %s", name)
+		return &HTTPResponse{
+			StatusLine: "HTTP/1.1 500 Internal Server Error",
+		}
+	}
+
+	log.Printf("served file: %s", name)
+	return &HTTPResponse{
+		StatusLine: "HTTP/1.1 200 OK",
+		Headers: map[string]string{
+			"Content-Type":   "application/octet-stream",
+			"Content-Length": fmt.Sprintf("%d", fi.Size()),
+		},
+		Body: string(buf),
 	}
 }
 

@@ -1,5 +1,5 @@
 run:
-    go run ./app
+    go run ./app --directory /Users/ryan/Downloads
 
 run_replica:
     go run ./app --port 8081 --replicaof localhost 6379
@@ -21,6 +21,10 @@ notfound:
     http :4221/notfound
 
 user-agent:
-    # make an http call to the server with a User-Agent header set to Mozilla
-    # check that Mozilla is returned in the response
     http :4221/user-agent User-Agent:Mozilla 
+
+files-exists:
+    http :4221/files/Letter.pdf
+
+files-not-exists: 
+    http :4221/files/does-not-exist
