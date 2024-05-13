@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"flag"
 	"fmt"
 	"log"
@@ -228,15 +229,32 @@ func (*Server) processEchoRequest(req *HTTPRequest) *HTTPResponse {
 	msg := strings.TrimPrefix(req.StartLine.Path, "/echo/")
 
 	headers := map[string]string{
-		"Content-Type":   "text/plain",
-		"Content-Length": fmt.Sprintf("%d", len(msg)),
+		"Content-Type": "text/plain",
 	}
 
 	if stringSliceContains(req.Headers["Accept-Encoding"], "gzip") {
 		headers["Content-Encoding"] = "gzip"
+		var buf bytes.Buffer
+		gz := gzip.NewWriter(&buf)
+		_, err := gz.Write([]byte(msg))
+		if err != nil {
+			return &HTTPResponse{
+				StatusLine: "HTTP/1.1 500 Internal Server Error",
+			}
+		}
+		err = gz.Close()
+		if err != nil {
+			return &HTTPResponse{
+				StatusLine: "HTTP/1.1 500 Internal Server Error",
+			}
+		}
+
+		headers["Content-Length"] = fmt.Sprintf("%d", buf.Len())
+		msg = buf.String()
+	} else {
+		headers["Content-Length"] = fmt.Sprintf("%d", len(msg))
 	}
 
-	log.Printf("Headers: %v", headers)
 	return &HTTPResponse{
 		StatusLine: "HTTP/1.1 200 OK",
 		Headers:    headers,
