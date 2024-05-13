@@ -44,9 +44,9 @@ func TestReadStartLine(t *testing.T) {
 
 func TestReadHeaders(t *testing.T) {
 	headersStr := "Host: localhost\r\nContent-Type: application/json\r\n\r\n"
-	expectedHeaders := map[string]string{
-		"Host":         "localhost",
-		"Content-Type": "application/json",
+	expectedHeaders := map[string][]string{
+		"Host":         {"localhost"},
+		"Content-Type": {"application/json"},
 	}
 
 	r := strings.NewReader(headersStr)
@@ -54,6 +54,18 @@ func TestReadHeaders(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHeaders, headers)
+
+	headersStrWithMultipleValues := "Host: localhost\r\nContent-Type: application/json, text/plain\r\n\r\n"
+	expectedHeadersWithMultipleValues := map[string][]string{
+		"Host":         {"localhost"},
+		"Content-Type": {"application/json", "text/plain"},
+	}
+
+	r = strings.NewReader(headersStrWithMultipleValues)
+	headers, err = readHeaders(bufio.NewReader(r))
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedHeadersWithMultipleValues, headers)
 }
 
 func TestHTTPResponseBytes(t *testing.T) {

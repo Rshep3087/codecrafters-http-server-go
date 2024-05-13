@@ -14,7 +14,7 @@ import (
 
 type HTTPRequest struct {
 	StartLine StartLine
-	Headers   map[string]string
+	Headers   map[string][]string
 	Body      []byte
 }
 
@@ -42,11 +42,9 @@ func ParseHTTPRequest(r *bufio.Reader) (*HTTPRequest, error) {
 
 	// read the rest of the request and log for now
 	cntLen := headers["Content-Length"]
-	if cntLen != "" {
-
+	if len(cntLen) > 0 {
 		bodyLen := 0
-		fmt.Sscanf(cntLen, "%d", &bodyLen)
-		log.Println("Body length: ", bodyLen)
+		fmt.Sscanf(cntLen[0], "%d", &bodyLen)
 
 		bdy := make([]byte, bodyLen)
 		_, err = r.Read(bdy)
@@ -106,14 +104,13 @@ func readStartLine(r *bufio.Reader) (StartLine, error) {
 	return startLine, nil
 }
 
-func readHeaders(r *bufio.Reader) (map[string]string, error) {
-	headers := make(map[string]string)
+func readHeaders(r *bufio.Reader) (map[string][]string, error) {
+	headers := make(map[string][]string)
 	for {
 		line, _, err := readLine(r)
 		if err != nil {
 			return headers, err
 		}
-		// end of headers
 		if len(line) == 0 {
 			break
 		}
@@ -121,7 +118,15 @@ func readHeaders(r *bufio.Reader) (map[string]string, error) {
 		if len(parts) != 2 {
 			return headers, fmt.Errorf("Invalid header: %s", line)
 		}
-		headers[parts[0]] = parts[1]
+
+		// check for multiple values
+		vals := strings.Split(parts[1], ", ")
+		if len(vals) > 1 {
+			headers[parts[0]] = vals
+			continue
+		}
+
+		headers[parts[0]] = append(headers[parts[0]], parts[1])
 	}
 	return headers, nil
 }
@@ -185,7 +190,7 @@ func (s *Server) routeRequest(req *HTTPRequest) *HTTPResponse {
 
 	// handle "/user-agent
 	if req.StartLine.Path == "/user-agent" {
-		ua := req.Headers["User-Agent"]
+		ua := req.Headers["User-Agent"][0]
 		return &HTTPResponse{
 			StatusLine: "HTTP/1.1 200 OK",
 			Headers: map[string]string{
@@ -227,15 +232,28 @@ func (*Server) processEchoRequest(req *HTTPRequest) *HTTPResponse {
 		"Content-Length": fmt.Sprintf("%d", len(msg)),
 	}
 
-	if req.Headers["Accept-Encoding"] == "gzip" {
+	if stringSliceContains(req.Headers["Accept-Encoding"], "gzip") {
 		headers["Content-Encoding"] = "gzip"
 	}
 
+	log.Printf("Headers: %v", headers)
 	return &HTTPResponse{
 		StatusLine: "HTTP/1.1 200 OK",
 		Headers:    headers,
 		Body:       msg,
 	}
+}
+
+func stringSliceContains(s []string, e string) bool {
+	log.Printf("s: %v, e: %s", s, e)
+	for _, a := range s {
+		log.Println("Checking if ", a, " is equal to ", e)
+		if a == e {
+			log.Println("Found")
+			return true
+		}
+	}
+	return false
 }
 
 // saveFile saves the body of the request to a file
